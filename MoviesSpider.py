@@ -6,8 +6,8 @@ Created on 2016.9.9
 from bs4  import BeautifulSoup
 import requests
 from idlelib.IOBinding import encoding
-import xlrd
-
+import xlwt
+import time
 def get_web_data(url):
     
     #get web content
@@ -36,6 +36,7 @@ def get_all_movie_of_a_type(type_url,type):
     web_data = get_web_data(type_url)
     Soup = BeautifulSoup(web_data.text,'lxml')
     
+    
     movies_f = open("%s.txt"%type,"a+")
     
     movies = Soup.select('div.channel-detail.movie-item-title > a')
@@ -47,22 +48,24 @@ def get_all_movie_of_a_type(type_url,type):
     
 
 def get_all_comments_of_a_movie(movie_url,movie):
-    
+    comment_list =[]
     web_data = get_web_data(movie_url)
     Soup = BeautifulSoup(web_data.text,'lxml')
-    comments_f = open('%s.txt'%movie,'a+',encoding='utf-8')
-    comments = Soup.select(' div.comment-content')
-   
-    for comment in comments:
-        
-        comments_f.write(comment.get_text())
-    comments_f.close()
+    comment_list.append(movie)
     
+    comments = Soup.select(' div.comment-content')
+    
+    for comment in comments:
+        comment_list.append(comment.get_text())
+        
+    return comment_list
 def spider(url):
     #excute the crawl steps
     get_all_tages(url)
-    data = xlrd.open_workbook('comment.xls')
-    table = data.sheets()[0]
+    file = xlwt.Workbook()
+    table = file.add_sheet('Sheet1',cell_overwrite_ok=True)
+    column = 0
+    row = 0
     
     f = open('tags.txt','r')
     
@@ -81,9 +84,12 @@ def spider(url):
              
             type_url = 'http://maoyan.com/films'+line
             get_all_movie_of_a_type(type_url, type)
+           
             ff = open("%s.txt"%type,'r')
             inside_temp = 0
             for inside_line in ff:
+                
+                
                 inside_temp = inside_temp + 1
                 if not inside_line:
                     break
@@ -93,12 +99,16 @@ def spider(url):
                 else:
                      
                     movie_url = 'http://maoyan.com'+inside_line.strip('\n')
-                    
-                    get_all_comments_of_a_movie(movie_url,movie)
-                
+                    column = 0
+                    row += 1
+                    comments = get_all_comments_of_a_movie(movie_url,movie)
+                    for comment in comments:
+                        table.write(row,column,comment)
+                        column += 1
+                    time.sleep(1)
             ff.close()
     f.close()
-        
+    file.save('comments.xls')    
     
     
     
